@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AegisGuard - Intrusion Detection System (IDS)</title>
+    <!-- Chart.js for Dashboard Visualizations -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --bg-dark: #0b0f19;
+            --bg-card: #111827;
+            --bg-card-hover: #1f2937;
+            --border-color: #1f2937;
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --accent-cyan: #06b6d4;
+            --accent-blue: #3b82f6;
+            --danger-red: #ef4444;
+            --warning-amber: #f59e0b;
+            --success-green: #10b981;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            display: flex;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Sidebar Navigation */
+        sidebar {
+            width: 250px;
+            background-color: #0d1322;
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            position: fixed;
+            height: 100vh;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--accent-cyan);
+            margin-bottom: 40px;
+        }
+
+        .nav-links {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            color: var(--text-muted);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+
+        .nav-item:hover, .nav-item.active {
+            background-color: var(--bg-card);
+            color: var(--accent-cyan);
+        }
+
+        /* Main Layout */
+        main {
+            margin-left: 250px;
+            flex: 1;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        /* Header */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .system-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background-color: rgba(16, 185, 129, 0.1);
+            color: var(--success-green);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--success-green);
+            border-radius: 50%;
+            box-shadow: 0 0 8px var(--success-green);
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(1.2); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+
+        /* Dashboard Cards Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+        }
+
+        .card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .stat-card {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .stat-title {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+        }
+
+        /* Charts Layout */
+        .charts-container {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+        }
+
+        .chart-box {
+            position: relative;
+            height: 280px;
+        }
+
+        /* Logs Section */
+        .logs-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .table-wrapper {
+            overflow-y: auto;
+            max-height: 300px;
+            border-radius: 8px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 0.9rem;
+        }
+
+        th {
+            background-color: #1a2332;
+            color: var(--text-muted);
+            padding: 12px;
+            position: sticky;
+            top: 0;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        tr:hover {
+            background-color: var(--bg-card-hover);
+        }
+
+        .badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .badge-high { background-color: rgba(239, 68, 68, 0.2); color: var(--danger-red); }
+        .badge-medium { background-color: rgba(245, 158, 11, 0.2); color: var(--warning-amber); }
+        .badge-low { background-color: rgba(6, 182, 212, 0.2); color: var(--accent-cyan); }
+
+        /* Traffic Stream Console */
+        .stream-console {
+            background-color: #050811;
+            border: 1px solid var(--border-color);
+            font-family: 'Courier New', Courier, monospace;
+            padding: 12px;
+            height: 300px;
+            overflow-y: auto;
+            border-radius: 8px;
+            font-size: 0.82rem;
+        }
+
+        .console-line {
+            margin-bottom: 6px;
+            line-height: 1.4;
+        }
+        .console-line.suspicious {
+            color: var(--danger-red);
+            font-weight: bold;
+        }
+        .console-line.normal {
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <sidebar>
+        <div class="logo">
+            <i data-lucide="shield-alert"></i>
+            <span>AegisGuard IDS</span>
+        </div>
+        <ul class="nav-links">
+            <li><a href="#" class="nav-item active"><i data-lucide="layout-dashboard"></i> Dashboard</a></li>
+            <li><a href="#" class="nav-item"><i data-lucide="activity"></i> Traffic Monitor</a></li>
+            <li><a href="#" class="nav-item"><i data-lucide="file-text"></i> Attack Logs</a></li>
+            <li><a href="#" class="nav-item"><i data-lucide="sliders"></i> Detection Rules</a></li>
+            <li><a href="#" class="nav-item"><i data-lucide="settings"></i> Settings</a></li>
+        </ul>
+    </sidebar>
+
+    <!-- Main Content -->
+    <main>
+        <!-- Header Section -->
+        <header>
+            <div>
+                <h1>Intrusion Detection System</h1>
+                <p style="color: var(--text-muted); font-size: 0.9rem;">Real-time network surveillance and threat analytics</p>
+            </div>
+            <div class="system-status">
+                <div class="pulse-dot"></div>
+                <span>IDS Active & Monitoring</span>
+            </div>
+        </header>
+
+        <!-- Requirement 5: Attack Statistics in Dashboard -->
+        <section class="stats-grid">
+            <div class="card stat-card">
+                <span class="stat-title">Total Packets Inspected</span>
+                <span class="stat-value" id="stat-packets">128,490</span>
+            </div>
+            <div class="card stat-card">
+                <span class="stat-title">Suspicious Activities</span>
+                <span class="stat-value" style="color: var(--warning-amber);" id="stat-suspicious">142</span>
+            </div>
+            <div class="card stat-card">
+                <span class="stat-title">Attacks Blocked</span>
+                <span class="stat-value" style="color: var(--danger-red);" id="stat-attacks">38</span>
+            </div>
+            <div class="card stat-card">
+                <span class="stat-title">Active Alert Level</span>
+                <span class="stat-value" style="color: var(--accent-cyan);">ELEVATED</span>
+            </div>
+        </section>
+
+        <!-- Requirement 1 & 5: Network Traffic Chart & Vector Breakdown -->
+        <section class="charts-container">
+            <div class="card">
+                <h3 style="margin-bottom: 15px;">Network Traffic & Detection Rate</h3>
+                <div class="chart-box">
+                    <canvas id="trafficChart"></canvas>
+                </div>
+            </div>
+            <div class="card">
+                <h3 style="margin-bottom: 15px;">Attack Categories</h3>
+                <div class="chart-box">
+                    <canvas id="attackPieChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- Requirement 1, 2, 3, 4: Real-time Monitor Console & Attack Logs -->
+        <section class="logs-section">
+            <!-- Requirement 1 & 2: Network Traffic & Suspicious Activity Stream -->
+            <div class="card">
+                <h3 style="margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                    <i data-lucide="radio" style="color: var(--accent-cyan);"></i> Live Network Packet Stream
+                </h3>
+                <div class="stream-console" id="console-stream">
+                    <!-- Dynamic live logs injected here -->
+                </div>
+            </div>
+
+            <!-- Requirement 3 & 4: Generated Real-Time Alerts & Logged Attack Attempts -->
+            <div class="card">
+                <h3 style="margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                    <i data-lucide="alert-triangle" style="color: var(--danger-red);"></i> Logged Attack Attempts
+                </h3>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Source IP</th>
+                                <th>Attack Vector</th>
+                                <th>Severity</th>
+                            </tr>
+                        </thead>
+                        <tbody id="attack-logs-body">
+                            <!-- Injected by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // Initialize Lucide Icons
+        lucide.createIcons();
+
+        // Data Generators for Simulation
+        const attackTypes = ["SYN Flood DDoS", "SQL Injection", "Port Scan", "XSS Payload", "Brute Force SSH"];
+        const ips = ["192.168.1.104", "45.33.32.156", "185.220.101.5", "10.0.0.45", "198.51.100.23"];
+        
+        let packetCount = 128490;
+        let suspiciousCount = 142;
+        let attackCount = 38;
+
+        // Requirement 5: Display Attack Statistics (Chart.js Setup)
+        const ctxTraffic = document.getElementById('trafficChart').getContext('2d');
+        const trafficChart = new Chart(ctxTraffic, {
+            type: 'line',
+            data: {
+                labels: ['10s ago', '8s ago', '6s ago', '4s ago', '2s ago', 'Now'],
+                datasets: [{
+                    label: 'Packets / Sec',
+                    data: [120, 190, 300, 500, 240, 320],
+                    borderColor: '#06b6d4',
+                    tension: 0.4,
+                    fill: false
+                }, {
+                    label: 'Suspicious Traffic',
+                    data: [2, 5, 25, 40, 10, 15],
+                    borderColor: '#ef4444',
+                    tension: 0.4,
+                    fill: false
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { labels: { color: '#9ca3af' } } },
+                scales: {
+                    x: { ticks: { color: '#9ca3af' }, grid: { color: '#1f2937' } },
+                    y: { ticks: { color: '#9ca3af' }, grid: { color: '#1f2937' } }
+                }
+            }
+        });
+
+        const ctxPie = document.getElementById('attackPieChart').getContext('2d');
+        new Chart(ctxPie, {
+            type: 'doughnut',
+            data: {
+                labels: ['DDoS', 'SQLi', 'Port Scan', 'Other'],
+                datasets: [{
+                    data: [40, 25, 20, 15],
+                    backgroundColor: ['#ef4444', '#f59e0b', '#3b82f6', '#06b6d4'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom', labels: { color: '#9ca3af' } } }
+            }
+        });
+
+        // Requirement 1 & 2: Monitor Traffic & Detect Suspicious Activity
+        const consoleStream = document.getElementById('console-stream');
+        const attackLogBody = document.getElementById('attack-logs-body');
+
+        function generateTraffic() {
+            packetCount += Math.floor(Math.random() * 20) + 5;
+            document.getElementById('stat-packets').innerText = packetCount.toLocaleString();
+
+            const isSuspicious = Math.random() < 0.25; // 25% chance to simulate threat
+            const time = new Date().toLocaleTimeString();
+            const ip = ips[Math.floor(Math.random() * ips.length)];
+            const consoleLine = document.createElement('div');
+
+            if (isSuspicious) {
+                suspiciousCount++;
+                document.getElementById('stat-suspicious').innerText = suspiciousCount;
+
+                const attack = attackTypes[Math.floor(Math.random() * attackTypes.length)];
+                consoleLine.className = 'console-line suspicious';
+                consoleLine.innerText = `[${time}] ALERT: Suspicious activity detected from ${ip} -> Payload matched rule: [${attack}]`;
+
+                // Requirement 3 & 4: Real-Time Alerts & Attack Logging
+                logAttackAttempt(time, ip, attack);
+            } else {
+                consoleLine.className = 'console-line normal';
+                consoleLine.innerText = `[${time}] INFO: TCP Handshake ACK from ${ip}:8080 - 64 bytes`;
+            }
+
+            consoleStream.appendChild(consoleLine);
+            consoleStream.scrollTop = consoleStream.scrollHeight;
+
+            // Keep log console manageable
+            if (consoleStream.childNodes.length > 50) {
+                consoleStream.removeChild(consoleStream.firstChild);
+            }
+        }
+
+        // Requirement 4: Log attack attempts into structured log table
+        function logAttackAttempt(time, ip, attack) {
+            attackCount++;
+            document.getElementById('stat-attacks').innerText = attackCount;
+
+            const row = document.createElement('tr');
+            const severity = attack.includes('DDoS') || attack.includes('SQL') ? 'HIGH' : 'MEDIUM';
+            const badgeClass = severity === 'HIGH' ? 'badge-high' : 'badge-medium';
+
+            row.innerHTML = `
+                <td>${time}</td>
+                <td>${ip}</td>
+                <td>${attack}</td>
+                <td><span class="badge ${badgeClass}">${severity}</span></td>
+            `;
+
+            attackLogBody.insertBefore(row, attackLogBody.firstChild);
+
+            // Limit table rows display
+            if (attackLogBody.children.length > 10) {
+                attackLogBody.removeChild(attackLogBody.lastChild);
+            }
+        }
+
+        // Continuous Loop to simulate live monitoring
+        setInterval(generateTraffic, 1200);
+
+        // Update live chart data periodically
+        setInterval(() => {
+            const now = new Date().toLocaleTimeString().split(' ')[0];
+            trafficChart.data.labels.shift();
+            trafficChart.data.labels.push(now);
+
+            trafficChart.data.datasets[0].data.shift();
+            trafficChart.data.datasets[0].data.push(Math.floor(Math.random() * 300) + 100);
+
+            trafficChart.data.datasets[1].data.shift();
+            trafficChart.data.datasets[1].data.push(Math.floor(Math.random() * 30));
+
+            trafficChart.update();
+        }, 2000);
+    </script>
+</body>
+  </html>
+                  
